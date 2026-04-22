@@ -4,11 +4,14 @@ from app.schema import PostCreate , PostUpdate , PostResponse
 from app.db import get_db
 from app import model
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/posts",
+    tags=["Posts"]
+)
 
 
 # 📄 Get single post
-@router.get("/posts/{id}", status_code=status.HTTP_200_OK,response_model=PostResponse)
+@router.get("/{id}", status_code=status.HTTP_200_OK,response_model=PostResponse)
 def read_item(id: int, db: Session = Depends(get_db)):
 
     # RAW SQL (COMMENTED)
@@ -27,7 +30,7 @@ def read_item(id: int, db: Session = Depends(get_db)):
 
 
 # 📚 Get all posts
-@router.get("/posts", status_code=status.HTTP_200_OK,response_model=list[PostResponse])
+@router.get("/", status_code=status.HTTP_200_OK,response_model=list[PostResponse])
 def read_posts(db: Session = Depends(get_db)):
 
     # RAW SQL (COMMENTED)
@@ -39,7 +42,7 @@ def read_posts(db: Session = Depends(get_db)):
 
 
 # ➕ Create post
-@router.post("/posts", status_code=status.HTTP_201_CREATED,response_model=PostResponse)
+@router.post("/", status_code=status.HTTP_201_CREATED,response_model=PostResponse)
 def create_post(payload: PostCreate, db: Session = Depends(get_db)):
 
     # RAW SQL (COMMENTED)
@@ -61,7 +64,7 @@ def create_post(payload: PostCreate, db: Session = Depends(get_db)):
 
 
 # 🔄 Update post
-@router.put("/posts/{id}", status_code=status.HTTP_200_OK,response_model=PostResponse)
+@router.put("/{id}", status_code=status.HTTP_200_OK,response_model=PostResponse)
 def update_post(id: int, payload: PostUpdate, db: Session = Depends(get_db)):
 
     # RAW SQL (COMMENTED)
@@ -86,7 +89,7 @@ def update_post(id: int, payload: PostUpdate, db: Session = Depends(get_db)):
     return post_query.first()
 
 # ❌ Delete post
-@router.delete("/posts/{id}", status_code=status.HTTP_200_OK)
+@router.delete("/{id}", status_code=status.HTTP_200_OK)
 def delete_post(id: int, db: Session = Depends(get_db)):
 
     # RAW SQL (COMMENTED)
