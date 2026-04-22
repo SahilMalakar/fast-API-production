@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 # 📦 Request body schema (validation + deserialization)
 class PostBase(BaseModel):
@@ -18,3 +18,18 @@ class PostResponse(PostBase):
     created_at: datetime
     class Config:
         orm_mode = True
+
+class UserBase(BaseModel):
+    email: EmailStr
+    password: str
+
+class UserCreate(UserBase):
+    pass
+
+class UserResponse(BaseModel):
+    id: int
+    email: EmailStr
+    created_at: datetime
+    class Config:
+        orm_mode = True
+    
