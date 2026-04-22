@@ -2,8 +2,7 @@ from fastapi import FastAPI, HTTPException, status, Depends
 from sqlalchemy.orm import Session
 from app import model
 from app.db import engine, get_db
-from app.schema import PostCreate
-
+from app.schema import PostCreate , PostUpdate , PostResponse
 
 
 # 🔌 Establish DB connection with retry (useful if DB starts late)
@@ -40,7 +39,7 @@ def read_root():
 
 
 # 📄 Get single post
-@app.get("/posts/{id}", status_code=status.HTTP_200_OK)
+@app.get("/posts/{id}", status_code=status.HTTP_200_OK,response_model=PostResponse)
 def read_item(id: int, db: Session = Depends(get_db)):
 
     # RAW SQL (COMMENTED)
@@ -59,7 +58,7 @@ def read_item(id: int, db: Session = Depends(get_db)):
 
 
 # 📚 Get all posts
-@app.get("/posts", status_code=status.HTTP_200_OK)
+@app.get("/posts", status_code=status.HTTP_200_OK,response_model=list[PostResponse])
 def read_posts(db: Session = Depends(get_db)):
 
     # RAW SQL (COMMENTED)
@@ -67,11 +66,11 @@ def read_posts(db: Session = Depends(get_db)):
     # posts = db.fetchall()
 
     posts = db.query(model.Post).all()
-    return {"posts": posts}
+    return posts
 
 
 # ➕ Create post
-@app.post("/posts", status_code=status.HTTP_201_CREATED)
+@app.post("/posts", status_code=status.HTTP_201_CREATED,response_model=PostResponse)
 def create_post(payload: PostCreate, db: Session = Depends(get_db)):
 
     # RAW SQL (COMMENTED)
@@ -93,8 +92,8 @@ def create_post(payload: PostCreate, db: Session = Depends(get_db)):
 
 
 # 🔄 Update post
-@app.put("/posts/{id}", status_code=status.HTTP_200_OK)
-def update_post(id: int, payload: PostCreate, db: Session = Depends(get_db)):
+@app.put("/posts/{id}", status_code=status.HTTP_200_OK,response_model=PostResponse)
+def update_post(id: int, payload: PostUpdate, db: Session = Depends(get_db)):
 
     # RAW SQL (COMMENTED)
     # db.execute(
@@ -117,9 +116,8 @@ def update_post(id: int, payload: PostCreate, db: Session = Depends(get_db)):
 
     return post_query.first()
 
-
 # ❌ Delete post
-@app.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@app.delete("/posts/{id}", status_code=status.HTTP_200_OK)
 def delete_post(id: int, db: Session = Depends(get_db)):
 
     # RAW SQL (COMMENTED)
@@ -141,4 +139,4 @@ def delete_post(id: int, db: Session = Depends(get_db)):
     post_query.delete(synchronize_session=False)
     db.commit()
 
-    return
+    return {"message": "Deleted successfully"}
