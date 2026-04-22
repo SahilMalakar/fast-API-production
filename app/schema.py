@@ -17,7 +17,7 @@ class PostResponse(PostBase):
     id: int
     created_at: datetime
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -31,5 +31,11 @@ class UserResponse(BaseModel):
     email: EmailStr
     created_at: datetime
     class Config:
-        orm_mode = True
+        from_attributes = True
     
+class AuthResponse(BaseModel):
+    message: str
+    user: UserResponse
+    class Config:
+        from_attributes = True
+
