@@ -1,9 +1,10 @@
-from jwt import PyJWTError
+from fastapi import Cookie
+from app.schema import TokenData
 from starlette import status
 from fastapi import HTTPException
 from datetime import timedelta , datetime
 from pwdlib import PasswordHash
-from jwt import encode, decode
+from jwt import encode, decode ,InvalidTokenError , ExpiredSignatureError
 
 
 pwd_context = PasswordHash.recommended()
@@ -41,16 +42,36 @@ def create_access_token(data: dict):
 
 
 # decode token
-def decode_token(token: str):
+def verify_access_token(token: str):
     try:
         payload = decode(token, SECRET_KEY, algorithms=[ALGORITHM])
 
-        print(payload)
-        return payload
+        user_id = payload.get("user_id")
+        email = payload.get("email")
 
-    except PyJWTError as e:
-        print(e)
+        if user_id is None or email is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload"
+            )
+
+        return TokenData(user_id=user_id, email=email)
+
+    except ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expired"
+        )
+
+    except InvalidTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token"
         )
+
+def get_current_user(access_token: str = Cookie(None)):
+
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    return verify_access_token(access_token)

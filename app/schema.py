@@ -1,6 +1,11 @@
 from datetime import datetime
 from pydantic import BaseModel, EmailStr
 
+
+
+
+
+
 # 📦 Request body schema (validation + deserialization)
 class PostBase(BaseModel):
     title: str
@@ -18,6 +23,15 @@ class PostResponse(PostBase):
     created_at: datetime
     class Config:
         from_attributes = True
+
+
+
+
+
+
+
+
+
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -39,3 +53,17 @@ class AuthResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+
+
+
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    user_id: int | None = None
+    email: str | None = None
