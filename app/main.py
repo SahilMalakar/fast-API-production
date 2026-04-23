@@ -1,7 +1,7 @@
 from fastapi import FastAPI, status
 from app import model
 from app.db import engine
-from app.routers import posts , users , auth
+from app.routers import posts , users , auth ,votes
 
 model.Base.metadata.create_all(bind=engine)
 
@@ -16,6 +16,7 @@ app = FastAPI(
 app.include_router(posts.router)
 app.include_router(users.router)
 app.include_router(auth.router)
+app.include_router(votes.router)
 
 # 🏠 Health check
 @app.get("/", status_code=status.HTTP_200_OK)

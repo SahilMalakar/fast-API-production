@@ -1,5 +1,6 @@
 from datetime import datetime
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr,Field
+from typing import Annotated
 
 
 
@@ -30,35 +31,41 @@ class AuthResponse(BaseModel):
 
 
 # 📦 Request body schema (validation + deserialization)
+class VoteBase(BaseModel):
+    post_id: int
+    dir: Annotated[int, Field(ge=0, le=1)]
+
 class PostBase(BaseModel):
     title: str
     content: str
     published: bool = True
-    user:UserResponse 
 
-class PostCreate(BaseModel):
-    title: str
-    content: str
-    published: bool = True  
+
+class PostCreate(PostBase):
+    pass
+
 
 class PostUpdate(BaseModel):
     title: str | None = None
     content: str | None = None
     published: bool | None = None
 
+
 class PostResponse(PostBase):
     id: int
-    user_id: int
     created_at: datetime
+    user: UserResponse
+
     class Config:
         from_attributes = True
 
 
+class PostResponseWithVotes(BaseModel):
+    post: PostResponse
+    votes: int
 
-
-
-
-
+    class Config:
+        from_attributes = True
 
 
 class Token(BaseModel):

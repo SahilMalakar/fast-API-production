@@ -1,9 +1,9 @@
 from fastapi import HTTPException, status, Depends, APIRouter, Query
 from sqlalchemy.orm import Session
 from typing import List
-from sqlalchemy import or_
+from sqlalchemy import or_ ,func
 
-from app.schema import PostCreate, PostUpdate, PostResponse
+from app.schema import PostCreate, PostUpdate, PostResponse , PostResponseWithVotes
 from app.db import get_db
 from app import model
 from app.util import get_current_user
@@ -16,29 +16,39 @@ router = APIRouter(
 
 
 # 📄 Get single post (ONLY OWNER)
-@router.get("/{id}", status_code=status.HTTP_200_OK, response_model=PostResponse)
+@router.get("/{id}", status_code=status.HTTP_200_OK, response_model=PostResponseWithVotes)
 def read_item(
     id: int,
     db: Session = Depends(get_db),
     current_user: model.User = Depends(get_current_user)
 ):
-    post = db.query(model.Post).filter(
+    result = db.query(
+        model.Post,
+        func.count(model.Vote.post_id).label("votes")
+    ).join(
+        model.Vote,
+        model.Vote.post_id == model.Post.id,
+        isouter=True
+    ).group_by(
+        model.Post.id
+    ).filter(
         model.Post.id == id,
         model.Post.user_id == current_user.id
     ).first()
 
-    if not post:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Post not found"
-        )
+    if not result:
+        raise HTTPException(status_code=404, detail="Post not found")
 
-    return post
+    post, votes = result
 
+    return {
+        "post": post,
+        "votes": votes
+    }
 
 # 📚 Get all posts (ONLY USER'S POSTS + PAGINATION)
 
-@router.get("/", status_code=status.HTTP_200_OK, response_model=List[PostResponse])
+@router.get("/", status_code=status.HTTP_200_OK, response_model=List[PostResponseWithVotes])
 def read_posts(
     db: Session = Depends(get_db),
     current_user: model.User = Depends(get_current_user),
@@ -46,11 +56,20 @@ def read_posts(
     skip: int = Query(0, ge=0),
     search: str | None = None
 ):
-    query = db.query(model.Post).filter(
+    query = db.query(
+        model.Post,
+        func.count(model.Vote.post_id).label("votes")
+    ).join(
+        model.Vote,
+        model.Vote.post_id == model.Post.id,
+        isouter=True
+    ).group_by(
+        model.Post.id
+    ).filter(
         model.Post.user_id == current_user.id
     )
 
-    # 🔍 Apply search (if provided)
+    # 🔍 Search
     if search:
         query = query.filter(
             or_(
@@ -59,10 +78,14 @@ def read_posts(
             )
         )
 
-    posts = query.limit(limit).offset(skip).all()
+    results = query.limit(limit).offset(skip).all()
 
-    return posts
 
+    return [{
+        "post": post,
+        "votes": votes
+    } 
+    for post, votes in results]
 
 # ➕ Create post
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=PostResponse)
