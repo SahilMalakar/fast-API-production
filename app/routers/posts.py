@@ -1,8 +1,12 @@
-from fastapi import  HTTPException, status, Depends, APIRouter
+from fastapi import HTTPException, status, Depends, APIRouter, Query
 from sqlalchemy.orm import Session
-from app.schema import PostCreate , PostUpdate , PostResponse
+from typing import List
+
+from app.schema import PostCreate, PostUpdate, PostResponse
 from app.db import get_db
 from app import model
+from app.util import get_current_user
+
 
 router = APIRouter(
     prefix="/posts",
@@ -10,15 +14,17 @@ router = APIRouter(
 )
 
 
-# 📄 Get single post
-@router.get("/{id}", status_code=status.HTTP_200_OK,response_model=PostResponse)
-def read_item(id: int, db: Session = Depends(get_db)):
-
-    # RAW SQL (COMMENTED)
-    # db.execute("SELECT * FROM posts WHERE id = %s", (id,))
-    # post = db.fetchone()
-
-    post = db.query(model.Post).filter(model.Post.id == id).first()
+# 📄 Get single post (ONLY OWNER)
+@router.get("/{id}", status_code=status.HTTP_200_OK, response_model=PostResponse)
+def read_item(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: model.User = Depends(get_current_user)
+):
+    post = db.query(model.Post).filter(
+        model.Post.id == id,
+        model.Post.user_id == current_user.id
+    ).first()
 
     if not post:
         raise HTTPException(
@@ -29,32 +35,32 @@ def read_item(id: int, db: Session = Depends(get_db)):
     return post
 
 
-# 📚 Get all posts
-@router.get("/", status_code=status.HTTP_200_OK,response_model=list[PostResponse])
-def read_posts(db: Session = Depends(get_db)):
+# 📚 Get all posts (ONLY USER'S POSTS + PAGINATION)
+@router.get("/", status_code=status.HTTP_200_OK, response_model=List[PostResponse])
+def read_posts(
+    db: Session = Depends(get_db),
+    current_user: model.User = Depends(get_current_user),
+    limit: int = Query(10, le=100),
+    skip: int = Query(0, ge=0)
+):
+    posts = db.query(model.Post).filter(
+        model.Post.user_id == current_user.id
+    ).limit(limit).offset(skip).all()
 
-    # RAW SQL (COMMENTED)
-    # db.execute("SELECT * FROM posts")
-    # posts = db.fetchall()
-
-    posts = db.query(model.Post).all()
     return posts
 
 
 # ➕ Create post
-@router.post("/", status_code=status.HTTP_201_CREATED,response_model=PostResponse)
-def create_post(payload: PostCreate, db: Session = Depends(get_db)):
-
-    # RAW SQL (COMMENTED)
-    # db.execute(
-    #     "INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *",
-    #     (payload.title, payload.content, payload.published)
-    # )
-    # new_post = db.fetchone()
-    # connection.commit()
-
-    new_post = model.Post(**payload.dict())
-    print(new_post)
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=PostResponse)
+def create_post(
+    payload: PostCreate,
+    db: Session = Depends(get_db),
+    current_user: model.User = Depends(get_current_user)
+):
+    new_post = model.Post(
+        **payload.dict(),
+        user_id=current_user.id
+    )
 
     db.add(new_post)
     db.commit()
@@ -63,18 +69,19 @@ def create_post(payload: PostCreate, db: Session = Depends(get_db)):
     return new_post
 
 
-# 🔄 Update post
-@router.put("/{id}", status_code=status.HTTP_200_OK,response_model=PostResponse)
-def update_post(id: int, payload: PostUpdate, db: Session = Depends(get_db)):
+# 🔄 Update post (ONLY OWNER)
+@router.put("/{id}", status_code=status.HTTP_200_OK, response_model=PostResponse)
+def update_post(
+    id: int,
+    payload: PostUpdate,
+    db: Session = Depends(get_db),
+    current_user: model.User = Depends(get_current_user)
+):
+    post_query = db.query(model.Post).filter(
+        model.Post.id == id,
+        model.Post.user_id == current_user.id
+    )
 
-    # RAW SQL (COMMENTED)
-    # db.execute(
-    #     "UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *",
-    #     (payload.title, payload.content, payload.published, id)
-    # )
-    # updated_post = db.fetchone()
-
-    post_query = db.query(model.Post).filter(model.Post.id == id)
     post = post_query.first()
 
     if not post:
@@ -83,23 +90,27 @@ def update_post(id: int, payload: PostUpdate, db: Session = Depends(get_db)):
             detail="Post not found"
         )
 
-    post_query.update(payload.dict(), synchronize_session=False)
+    post_query.update(
+        payload.dict(exclude_unset=True),
+        synchronize_session=False
+    )
     db.commit()
 
     return post_query.first()
 
-# ❌ Delete post
+
+# ❌ Delete post (ONLY OWNER)
 @router.delete("/{id}", status_code=status.HTTP_200_OK)
-def delete_post(id: int, db: Session = Depends(get_db)):
+def delete_post(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: model.User = Depends(get_current_user)
+):
+    post_query = db.query(model.Post).filter(
+        model.Post.id == id,
+        model.Post.user_id == current_user.id
+    )
 
-    # RAW SQL (COMMENTED)
-    # db.execute(
-    #     "DELETE FROM posts WHERE id = %s RETURNING *",
-    #     (id,)
-    # )
-    # post = db.fetchone()
-
-    post_query = db.query(model.Post).filter(model.Post.id == id)
     post = post_query.first()
 
     if not post:

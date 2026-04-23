@@ -1,11 +1,12 @@
-from fastapi import Cookie
-from app.schema import TokenData
-from starlette import status
-from fastapi import HTTPException
+from app import model
 from datetime import timedelta , datetime
-from pwdlib import PasswordHash
 from jwt import encode, decode ,InvalidTokenError , ExpiredSignatureError
-
+from sqlalchemy.orm import Session
+from pwdlib import PasswordHash
+from app.db import get_db
+from app.schema import TokenData
+from fastapi import Cookie, Depends, HTTPException
+from starlette import status
 
 pwd_context = PasswordHash.recommended()
 
@@ -69,9 +70,16 @@ def verify_access_token(token: str):
             detail="Invalid token"
         )
 
-def get_current_user(access_token: str = Cookie(None)):
+def get_current_user(access_token: str = Cookie(None),db: Session = Depends(get_db)):
 
     if not access_token:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    return verify_access_token(access_token)
+    token_data = verify_access_token(access_token)
+    user = db.query(model.User).filter(model.User.id == token_data.user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid user"
+        )
+    return user
