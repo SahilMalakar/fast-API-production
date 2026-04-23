@@ -7,6 +7,12 @@ from app.db import get_db
 from app.schema import TokenData
 from fastapi import Cookie, Depends, HTTPException
 from starlette import status
+from app.config import settings
+
+# secret key
+SECRET_KEY = settings.SECRET_KEY
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
+ALGORITHM = settings.ALGORITHM
 
 pwd_context = PasswordHash.recommended()
 
@@ -17,15 +23,6 @@ def hash_password(password: str):
 # Verification (login)
 def verify_password(plain_password: str, hashed_password: str):
     return pwd_context.verify(plain_password, hashed_password)
-
-
-
-# secret key
-SECRET_KEY = "my_secret_key_345678uytrsxcvbj098765qwergcbnjo09876543"
-# Access token lifetime
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-# Algorithm
-ALGORITHM = "HS256"
 
 
 # create token

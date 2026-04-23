@@ -5,7 +5,13 @@ from app.routers import posts , users , auth
 
 model.Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+app = FastAPI(
+    title="Social media app",
+    description="social media application",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
 
 app.include_router(posts.router)
 app.include_router(users.router)
