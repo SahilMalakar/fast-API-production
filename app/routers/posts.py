@@ -1,6 +1,7 @@
 from fastapi import HTTPException, status, Depends, APIRouter, Query
 from sqlalchemy.orm import Session
 from typing import List
+from sqlalchemy import or_
 
 from app.schema import PostCreate, PostUpdate, PostResponse
 from app.db import get_db
@@ -36,16 +37,29 @@ def read_item(
 
 
 # 📚 Get all posts (ONLY USER'S POSTS + PAGINATION)
+
 @router.get("/", status_code=status.HTTP_200_OK, response_model=List[PostResponse])
 def read_posts(
     db: Session = Depends(get_db),
     current_user: model.User = Depends(get_current_user),
     limit: int = Query(10, le=100),
-    skip: int = Query(0, ge=0)
+    skip: int = Query(0, ge=0),
+    search: str | None = None
 ):
-    posts = db.query(model.Post).filter(
+    query = db.query(model.Post).filter(
         model.Post.user_id == current_user.id
-    ).limit(limit).offset(skip).all()
+    )
+
+    # 🔍 Apply search (if provided)
+    if search:
+        query = query.filter(
+            or_(
+                model.Post.title.ilike(f"%{search}%"),
+                model.Post.content.ilike(f"%{search}%")
+            )
+        )
+
+    posts = query.limit(limit).offset(skip).all()
 
     return posts
 

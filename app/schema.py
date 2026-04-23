@@ -4,38 +4,6 @@ from pydantic import BaseModel, EmailStr
 
 
 
-
-
-# 📦 Request body schema (validation + deserialization)
-class PostBase(BaseModel):
-    title: str
-    content: str
-    published: bool = True  
-
-class PostCreate(PostBase):
-    pass 
-
-class PostUpdate(BaseModel):
-    title: str | None = None
-    content: str | None = None
-    published: bool | None = None
-
-class PostResponse(PostBase):
-    id: int
-    user_id: int
-    created_at: datetime
-    class Config:
-        from_attributes = True
-
-
-
-
-
-
-
-
-
-
 class UserBase(BaseModel):
     email: EmailStr
     password: str
@@ -55,6 +23,37 @@ class AuthResponse(BaseModel):
     user: UserResponse
     class Config:
         from_attributes = True
+
+
+
+
+
+
+# 📦 Request body schema (validation + deserialization)
+class PostBase(BaseModel):
+    title: str
+    content: str
+    published: bool = True
+    user:UserResponse 
+
+class PostCreate(BaseModel):
+    title: str
+    content: str
+    published: bool = True  
+
+class PostUpdate(BaseModel):
+    title: str | None = None
+    content: str | None = None
+    published: bool | None = None
+
+class PostResponse(PostBase):
+    id: int
+    user_id: int
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+
 
 
 
